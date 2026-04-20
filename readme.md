@@ -8,28 +8,23 @@
 - Асинхронный (asyncio)
 - Автоматические повторные попытки с экспоненциальной задержкой
 - Pydantic валидация конфигов
-- Разделение API параметров и клиентских настроек
 - Поддержка контекстного менеджера
+- Встроенные хелперы для создания сообщений
 
 ## Установка
 
 ```bash
-pip install git+https://github.com/sidorov-works/llm-client.git@v0.1.3
+pip install git+https://github.com/sidorov-works/llm-client.git@v0.1.4
 ```
 
 ## Быстрый старт
 
 ```python
-from llm_client import (
-    DeepSeekClient, 
-    DeepSeekAPIConfig, 
-    DeepSeekClientConfig,
-    user_message, 
-    system_message
-)
+from llm_client import DeepSeekClient, DeepSeekAPIConfig, DeepSeekClientConfig
 
 # Конфигурация параметров API
 api_config = DeepSeekAPIConfig(
+    model="deepseek-chat",
     temperature=0.6,
     max_tokens=1024
 )
@@ -44,10 +39,10 @@ client_config = DeepSeekClientConfig(
 # Создание клиента
 client = DeepSeekClient(api_config, client_config)
 
-# Подготовка сообщений
+# Подготовка сообщений (через хелперы клиента)
 messages = [
-    system_message("Ты полезный ассистент"),
-    user_message("Что такое Python?")
+    client.system_message("Ты полезный ассистент"),
+    client.user_message("Что такое Python?")
 ]
 
 # Запрос
@@ -65,17 +60,17 @@ async with DeepSeekClient(api_config, client_config) as client:
     answer = await client.generate(messages)
 ```
 
-## Создание сообщений
+## Хелперы для сообщений
+
+Каждый клиент предоставляет статические методы для создания сообщений в правильном формате:
 
 ```python
-from llm_client import user_message, system_message, assistant_message
-
-messages = [
-    system_message("Инструкция для системы"),
-    user_message("Вопрос пользователя"),
-    assistant_message("Предыдущий ответ ассистента")
-]
+system_msg = client.system_message("Ты помощник")
+user_msg = client.user_message("Привет")
+assistant_msg = client.assistant_message("Здравствуйте!")
 ```
+
+При необходимости хелперы переопределяются в наследниках для поддержки специфичных форматов API.
 
 ## Конфигурация
 
@@ -108,20 +103,24 @@ messages = [
 | OpenAIClient | 🚧 В планах |
 | OllamaClient | 🚧 В планах |
 
-## Бизнес-логика
-
-Для подготовки сложных промптов используйте отдельные классы, принимающие `BaseLLMClient`:
+## Создание собственного клиента
 
 ```python
 from llm_client import BaseLLMClient
 
-class SupportAgent:
-    def __init__(self, llm_client: BaseLLMClient):
-        self.llm = llm_client
+class MyCustomClient(BaseLLMClient):
+    @staticmethod
+    def user_message(content: str) -> Dict[str, str]:
+        # Переопределяем формат если нужно
+        return {"speaker": "human", "text": content}
     
-    async def answer_ticket(self, ticket):
-        messages = self._prepare_messages(ticket)
-        return await self.llm.generate(messages)
+    async def generate(self, messages, **kwargs):
+        # Реализация запроса к API
+        pass
+    
+    async def close(self):
+        # Освобождение ресурсов
+        pass
 ```
 
 ## Требования

@@ -9,7 +9,6 @@ DeepSeek API клиент.
 from typing import List, Dict, Optional, Any
 
 from .base_client import BaseLLMClient
-from .standard import StandardField
 from http_utils import RetryableHTTPClient
 
 from pydantic import BaseModel, Field, field_validator
@@ -251,12 +250,6 @@ class DeepSeekClient(BaseLLMClient):
         # Валидация входных данных
         if not messages:
             raise ValueError("Messages list cannot be empty")
-        
-        for i, msg in enumerate(messages):
-            if StandardField.ROLE not in msg:
-                raise ValueError(f"Message {i}: missing '{StandardField.ROLE}' field")
-            if StandardField.CONTENT not in msg:
-                raise ValueError(f"Message {i}: missing '{StandardField.CONTENT}' field")
         
         # Подготовка payload
         payload = self._prepare_payload(messages, **kwargs)

@@ -176,6 +176,23 @@ class BaseLLMClient(ABC):
         """
         pass
     
+
+    # Методы для формирования сообщений промпта в правильном для модели формате 
+    # с учетом названий полей и ролей. 
+    # Если в конкретном провайдере LLM метки и роли будут отличаться - 
+    # необходимо будет переопределить эти методы.
+    @staticmethod
+    def system_message(content: str) -> Dict[str, str]:
+        return {"role": "system", "content": content}
+    
+    @staticmethod
+    def user_message(content: str) -> Dict[str, str]:
+        return {"role": "user", "content": content}
+    
+    @staticmethod
+    def assistant_message(content: str) -> Dict[str, str]:
+        return {"role": "assistant", "content": content}
+
     # Опционально: контекстный менеджер, но не требует реализации в ABC
     # Каждый наследник может реализовать __aenter__ и __aexit__ сам
     
