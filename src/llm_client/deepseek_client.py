@@ -54,36 +54,46 @@ class DeepSeekClientConfig(BaseModel):
 class DeepSeekClient(BaseLLMClient):
     """
     Клиент для DeepSeek API.
-    
+
     Отвечает ТОЛЬКО за взаимодействие с DeepSeek API:
     - Принимает сообщения в унифицированном формате
-    - Преобразует в формат DeepSeek (совпадает, но для единообразия)
     - Отправляет запрос через RetryableHTTPClient с ретраями
     - Возвращает ответ или None при ошибке
-    
-    НЕ содержит бизнес-логики подготовки сообщений (например, для техподдержки).
-    Для этого используйте отдельные классы (LLMSupportAgent, LLMDocProcessor),
-    которые принимают этот клиент в конструкторе.
-    
+
+    НЕ содержит бизнес-логики подготовки сообщений.
+
     Пример использования:
-    
-        # Создание клиента
-        config = DeepSeekConfig(
-            api_key="sk-xxx",
-            temperature=0.7,
-            max_tokens=2000
+
+        from llm_client import DeepSeekClient, DeepSeekAPIConfig, DeepSeekClientConfig
+
+        # Параметры API (идут в тело запроса)
+        api_config = DeepSeekAPIConfig(
+            model="deepseek-chat",
+            temperature=0.6,
+            max_tokens=1024
         )
-        client = DeepSeekClient(config)
-        
-        # Подготовка сообщений (в клиентском коде или в бизнес-классе)
+
+        # Параметры клиента (настройки соединения)
+        client_config = DeepSeekClientConfig(
+            api_key="sk-xxx",
+            api_url="https://api.deepseek.com/v1/chat/completions",
+            timeout_total=60.0,
+            max_retries=3
+        )
+
+        # Создание клиента
+        client = DeepSeekClient(api_config, client_config)
+
+        # Подготовка сообщений
         messages = [
-            {"role": "system", "content": "You are a helpful assistant"},
-            {"role": "user", "content": "What is Python?"}
+            {"role": "system", "content": "Ты полезный ассистент"},
+            {"role": "user", "content": "Что такое Python?"}
         ]
-        
+
         # Запрос
         answer = await client.generate(messages)
-        
+        print(answer)
+
         # Освобождение ресурсов
         await client.close()
     """
