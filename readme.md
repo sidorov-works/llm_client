@@ -14,7 +14,7 @@
 ## Установка
 
 ```bash
-pip install git+https://github.com/sidorov-works/llm-client.git@v0.1.4
+pip install git+https://github.com/sidorov-works/llm-client.git@v0.1.5
 ```
 
 ## Быстрый старт
