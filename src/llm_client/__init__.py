@@ -8,7 +8,7 @@ from .standard import (
     StandardRole,
     StandardField
 )
-from .deepseek_client import DeepSeekClient, DeepSeekConfig
+from .deepseek_client import DeepSeekClient, DeepSeekClientConfig, DeepSeekAPIConfig
 
 __all__ = [
     "BaseLLMClient",
@@ -18,5 +18,6 @@ __all__ = [
     "user_message",
     "assistant_message",
     "DeepSeekClient",
-    "DeepSeekConfig"
+    "DeepSeekClientConfig",
+    "DeepSeekAPIConfig"
 ]

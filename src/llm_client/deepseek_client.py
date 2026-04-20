@@ -17,34 +17,33 @@ from pydantic import BaseModel, Field, field_validator
 import logging
 logger = logging.getLogger(__name__)
 
-
-class DeepSeekConfig(BaseModel):
-    """Конфигурация для DeepSeek клиента"""
-    
+class DeepSeekAPIConfig(BaseModel):
+    """
+    Параметры генерации -
+    параметры, которые уходят в тело запроса к API
+    """
     model_config = {
         "extra": "forbid",  # запрещаем лишние поля
         "frozen": True      # неизменяемый после создания
     }
-    
-    # Обязательные
-    api_key: str
-    
-    # Опциональные
-    api_url: str = "https://api.deepseek.com/v1/chat/completions"
+
     model: str = "deepseek-chat"
-    
-    # Параметры генерации
-    temperature: float = Field(default=0.6, ge=0.0, le=2.0)
-    max_tokens: int = Field(default=1024, gt=0, le=8192)
-    top_p: float = Field(default=0.9, ge=0.0, le=1.0)
-    frequency_penalty: float = Field(default=0.1, ge=-2.0, le=2.0)
-    presence_penalty: float = Field(default=0.1, ge=-2.0, le=2.0)
-    stop: Optional[List[str]] = Field(default=["\n--", "\n###"])
-    
-    # HTTP настройки
-    timeout_total: float = Field(default=60.0, gt=0)
-    max_retries: int = Field(default=3, ge=0)
-    
+    temperature: float = 0.6
+    max_tokens: int = 1024
+    top_p: float = 0.9
+    frequency_penalty: float = 0.1
+    presence_penalty: float = 0.1
+    stop: Optional[List[str]] = ["\n--", "\n###"]
+
+
+class DeepSeekClientConfig(BaseModel):
+    """Конфигурация клиента"""
+    api_key: str
+    api_url: str = "https://api.deepseek.com/v1/chat/completions"
+    timeout_total: float = 60.0
+    max_retries: int = 3
+    api_params: DeepSeekAPIConfig = Field(default_factory=DeepSeekAPIConfig)
+
     @field_validator("api_key")
     @classmethod
     def validate_api_key(cls, v: str) -> str:
@@ -90,28 +89,30 @@ class DeepSeekClient(BaseLLMClient):
         await client.close()
     """
     
-    def __init__(self, config: DeepSeekConfig):
+    def __init__(self, api_config: DeepSeekAPIConfig, client_config: DeepSeekClientConfig):
         """
         Инициализация DeepSeek клиента.
         
         Args:
-            config: Конфигурация клиента (DeepSeekConfig)
+            api_config: Параметры генерации (DeepSeekAPIConfig)
+            client_config: Параметры клиента (DeepSeekClientConfig)
                    Обязательно должен содержать api_key.
         """
         
-        self.config = config
+        self._api_config = api_config
+        self._client_config = client_config
         
         # Инициализируем HTTP клиент с ретраями
         # Используем RetryableHTTPClient из пакета http_utils
         self._http_client = RetryableHTTPClient(
-            base_timeout=config.timeout_total,   # таймаут на один запрос
-            max_retries=config.max_retries,       # количество повторных попыток
-            base_delay=1.0,                       # начальная задержка 1 секунда
-            max_delay=30.0,                       # максимум 30 секунд между попытками
-            total_timeout=config.timeout_total    # общий таймаут на все попытки
+            base_timeout=client_config.timeout_total,   # таймаут на один запрос
+            max_retries=client_config.max_retries,      # количество повторных попыток
+            base_delay=1.0,                             # начальная задержка 1 секунда
+            max_delay=30.0,                             # максимум 30 секунд между попытками
+            total_timeout=client_config.timeout_total   # общий таймаут на все попытки
         )
         
-        logger.debug(f"DeepSeekClient initialized with model={config.model}")
+        logger.debug(f"DeepSeekClient initialized with model={api_config.model}")
     
     def _prepare_payload(
         self, 
@@ -134,17 +135,17 @@ class DeepSeekClient(BaseLLMClient):
         """
         # Базовый payload из конфига
         payload = {
-            "model": self.config.model,
+            "model": self._api_config.model,
             "messages": messages,  # DeepSeek использует те же ключи "role"/"content"
-            "temperature": kwargs.get("temperature", self.config.temperature),
-            "max_tokens": kwargs.get("max_tokens", self.config.max_tokens),
-            "top_p": kwargs.get("top_p", self.config.top_p),
-            "frequency_penalty": kwargs.get("frequency_penalty", self.config.frequency_penalty),
-            "presence_penalty": kwargs.get("presence_penalty", self.config.presence_penalty),
+            "temperature": kwargs.get("temperature", self._api_config.temperature),
+            "max_tokens": kwargs.get("max_tokens", self._api_config.max_tokens),
+            "top_p": kwargs.get("top_p", self._api_config.top_p),
+            "frequency_penalty": kwargs.get("frequency_penalty", self._api_config.frequency_penalty),
+            "presence_penalty": kwargs.get("presence_penalty", self._api_config.presence_penalty),
         }
         
         # Добавляем stop, если он указан
-        stop = kwargs.get("stop", self.config.stop)
+        stop = kwargs.get("stop", self._api_config.stop)
         if stop:
             payload["stop"] = stop
         
@@ -253,16 +254,16 @@ class DeepSeekClient(BaseLLMClient):
         
         # Заголовки запроса
         headers = {
-            "Authorization": f"Bearer {self.config.api_key}",
+            "Authorization": f"Bearer {self._client_config.api_key}",
             "Content-Type": "application/json"
         }
         
-        logger.debug(f"Sending request to {self.config.api_url}")
+        logger.debug(f"Sending request to {self._client_config.api_url}")
         
         try:
             # Выполняем запрос с автоматическими ретраями
             response = await self._http_client.post_with_retry(
-                url=self.config.api_url,
+                url=self._client_config.api_url,
                 headers=headers,
                 json=payload,
                 success_statuses={200}

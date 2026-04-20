@@ -1,13 +1,14 @@
 # LLM Client
 
-Унифицированный асинхронный клиент для работы с LLM API (DeepSeek, OpenAI, Ollama и др.).
+Унифицированный асинхронный клиент для работы с LLM API.
 
 ## Особенности
 
 - Единый интерфейс для разных LLM провайдеров
 - Асинхронный (asyncio)
-- Автоматические повторные попытки при сбоях (через `http-utils`)
+- Автоматические повторные попытки с экспоненциальной задержкой
 - Pydantic валидация конфигов
+- Разделение API параметров и клиентских настроек
 - Поддержка контекстного менеджера
 
 ## Установка
@@ -19,11 +20,29 @@ pip install git+https://github.com/sidorov-works/llm-client.git@v0.1.0
 ## Быстрый старт
 
 ```python
-from llm_client import DeepSeekClient, DeepSeekConfig, user_message, system_message
+from llm_client import (
+    DeepSeekClient, 
+    DeepSeekAPIConfig, 
+    DeepSeekClientConfig,
+    user_message, 
+    system_message
+)
+
+# Конфигурация параметров API
+api_config = DeepSeekAPIConfig(
+    temperature=0.6,
+    max_tokens=1024
+)
+
+# Конфигурация клиента
+client_config = DeepSeekClientConfig(
+    api_key="sk-xxx",
+    timeout_total=60.0,
+    max_retries=3
+)
 
 # Создание клиента
-config = DeepSeekConfig(api_key="sk-xxx")
-client = DeepSeekClient(config)
+client = DeepSeekClient(api_config, client_config)
 
 # Подготовка сообщений
 messages = [
@@ -42,7 +61,7 @@ await client.close()
 ## Использование с контекстным менеджером
 
 ```python
-async with DeepSeekClient(config) as client:
+async with DeepSeekClient(api_config, client_config) as client:
     answer = await client.generate(messages)
 ```
 
@@ -54,22 +73,32 @@ from llm_client import user_message, system_message, assistant_message
 messages = [
     system_message("Инструкция для системы"),
     user_message("Вопрос пользователя"),
-    assistant_message("Предыдущий ответ")
+    assistant_message("Предыдущий ответ ассистента")
 ]
 ```
 
 ## Конфигурация
 
-```python
-config = DeepSeekConfig(
-    api_key="sk-xxx",
-    model="deepseek-chat",
-    temperature=0.6,
-    max_tokens=1024,
-    timeout_total=60.0,
-    max_retries=3
-)
-```
+### DeepSeekAPIConfig (параметры API)
+
+| Параметр | Тип | По умолчанию | Описание |
+|----------|-----|--------------|----------|
+| model | str | "deepseek-chat" | Имя модели |
+| temperature | float | 0.6 | Креативность (0.0-2.0) |
+| max_tokens | int | 1024 | Макс. длина ответа |
+| top_p | float | 0.9 | Альтернатива temperature |
+| frequency_penalty | float | 0.1 | Штраф за повторы |
+| presence_penalty | float | 0.1 | Штраф за повтор тем |
+| stop | List[str] | ["\n--", "\n###"] | Стоп-слова |
+
+### DeepSeekClientConfig (настройки клиента)
+
+| Параметр | Тип | По умолчанию | Описание |
+|----------|-----|--------------|----------|
+| api_key | str | **обязательный** | API ключ |
+| api_url | str | "https://api.deepseek.com/v1/chat/completions" | URL API |
+| timeout_total | float | 60.0 | Общий таймаут (сек) |
+| max_retries | int | 3 | Кол-во повторных попыток |
 
 ## Доступные клиенты
 
@@ -78,13 +107,14 @@ config = DeepSeekConfig(
 | DeepSeekClient | ✅ Готов |
 | OpenAIClient | 🚧 В планах |
 | OllamaClient | 🚧 В планах |
-| TGIClient | 🚧 В планах |
 
 ## Бизнес-логика
 
 Для подготовки сложных промптов используйте отдельные классы, принимающие `BaseLLMClient`:
 
 ```python
+from llm_client import BaseLLMClient
+
 class SupportAgent:
     def __init__(self, llm_client: BaseLLMClient):
         self.llm = llm_client
@@ -98,6 +128,7 @@ class SupportAgent:
 
 - Python >= 3.9
 - http-utils (автоматически устанавливается)
+- pydantic >= 2.0
 
 ## Лицензия
 
