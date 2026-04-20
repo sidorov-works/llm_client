@@ -1,6 +1,6 @@
 [project]
 name = "llm-client"
-version = "0.1.1"
+version = "0.1.2"
 description = "Custom LLM client"
 authors = [{name = "Oleg Sidorov", email = "sidorov.works@yandex.ru"}]
 license = {text = "MIT"}

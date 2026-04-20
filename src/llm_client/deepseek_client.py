@@ -23,7 +23,7 @@ class DeepSeekAPIConfig(BaseModel):
     параметры, которые уходят в тело запроса к API
     """
     model_config = {
-        "extra": "forbid",  # запрещаем лишние поля
+        "extra": "ignore",  # чтобы не сломаться, если клиентский код подкинет что-то "левое"
         "frozen": True      # неизменяемый после создания
     }
 
@@ -42,7 +42,6 @@ class DeepSeekClientConfig(BaseModel):
     api_url: str = "https://api.deepseek.com/v1/chat/completions"
     timeout_total: float = 60.0
     max_retries: int = 3
-    api_params: DeepSeekAPIConfig = Field(default_factory=DeepSeekAPIConfig)
 
     @field_validator("api_key")
     @classmethod
