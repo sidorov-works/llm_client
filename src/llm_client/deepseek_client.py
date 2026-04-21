@@ -39,7 +39,8 @@ class DeepSeekClientConfig(BaseModel):
     """Конфигурация клиента"""
     api_key: str
     api_url: str = "https://api.deepseek.com/v1/chat/completions"
-    timeout_total: float = 60.0
+    request_timeout: float = 60.0
+    timeout_total: float = 90.0
     max_retries: int = 3
 
     @field_validator("api_key")
@@ -113,7 +114,7 @@ class DeepSeekClient(BaseLLMClient):
         # Инициализируем HTTP клиент с ретраями
         # Используем RetryableHTTPClient из пакета http_utils
         self._http_client = RetryableHTTPClient(
-            base_timeout=client_config.timeout_total,   # таймаут на один запрос
+            base_timeout=client_config.request_timeout, # таймаут на один запрос
             max_retries=client_config.max_retries,      # количество повторных попыток
             base_delay=1.0,                             # начальная задержка 1 секунда
             max_delay=30.0,                             # максимум 30 секунд между попытками
