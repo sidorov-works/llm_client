@@ -1,13 +1,13 @@
 [project]
 name = "llm-client"
-version = "0.1.7"
+version = "0.1.8"
 description = "Custom LLM client"
 authors = [{name = "Oleg Sidorov", email = "sidorov.works@yandex.ru"}]
 license = {text = "MIT"}
 readme = "readme.md"
 requires-python = ">=3.9"
 dependencies = [
-    "http-utils @ git+https://github.com/sidorov-works/http_utils.git@v0.2.2",
+    "http-utils @ git+https://github.com/sidorov-works/http_utils.git@v0.2.3",
     "pydantic>=2.0"
 ]
 
